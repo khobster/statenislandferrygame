@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ferry Chase</title>
+    <style>
+        body { margin: 0; padding: 0; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
+    <script>
+    const config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        physics: {
+            default: 'arcade',
+            arcade: {
+                gravity: { y: 300 },
+                debug: false
+            }
+        },
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        }
+    };
+
+    const game = new Phaser.Game(config);
+
+    function preload() {
+        this.load.image('background', 'background.png');
+        this.load.image('dock', 'dock.png');
+        this.load.image('player', 'player.png');
+        this.load.image('ferry', 'ferry.png');
+    }
+
+    function create() {
+        this.add.image(400, 300, 'background');
+        this.add.image(400, 575, 'dock');
+
+        this.player = this.physics.add.sprite(50, 450, 'player');
+        this.player.setCollideWorldBounds(true);
+
+        this.ferry = this.physics.add.sprite(900, 450, 'ferry');
+
+        this.cursors = this.input.keyboard.createCursorKeys();
+    }
+
+    function update() {
+        if (this.cursors.up.isDown && this.player.body.touching.down) {
+            this.player.setVelocityY(-330);
+        }
+
+        // Move ferry towards the player
+        this.ferry.x -= 2;
+
+        // Check for collision
+        if (Phaser.Geom.Intersects.RectangleToRectangle(this.player.getBounds(), this.ferry.getBounds())) {
+            this.ferry.x = 900; // Reset ferry position
+            console.log('Level complete!');
+        }
+
+        // Reset ferry if it goes off screen
+        if (this.ferry.x < -100) {
+            this.ferry.x = 900;
+        }
+    }
+    </script>
+</body>
+</html>
