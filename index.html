@@ -5,17 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ferry Chase</title>
     <style>
-        body { margin: 0; padding: 0; }
-        canvas { display: block; }
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #gameContainer {
+            position: relative;
+        }
+        canvas {
+            border: 2px solid #333;
+        }
+        #scoreDisplay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            text-shadow: 2px 2px 2px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body>
+    <div id="gameContainer">
+        <div id="scoreDisplay">Score: 0</div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
     <script>
+    let score = 0;
+    let scoreText;
+    let gameOver = false;
+
     const config = {
         type: Phaser.AUTO,
         width: 800,
         height: 600,
+        parent: 'gameContainer',
         physics: {
             default: 'arcade',
             arcade: {
@@ -33,6 +64,7 @@
     const game = new Phaser.Game(config);
 
     function preload() {
+        // Updated file paths to look in the main directory
         this.load.image('background', 'background.png');
         this.load.image('dock', 'dock.png');
         this.load.image('player', 'player.png');
@@ -49,9 +81,15 @@
         this.ferry = this.physics.add.sprite(900, 450, 'ferry');
 
         this.cursors = this.input.keyboard.createCursorKeys();
+
+        scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#FFF' });
     }
 
     function update() {
+        if (gameOver) {
+            return;
+        }
+
         if (this.cursors.up.isDown && this.player.body.touching.down) {
             this.player.setVelocityY(-330);
         }
@@ -62,6 +100,8 @@
         // Check for collision
         if (Phaser.Geom.Intersects.RectangleToRectangle(this.player.getBounds(), this.ferry.getBounds())) {
             this.ferry.x = 900; // Reset ferry position
+            score += 10;
+            scoreText.setText('Score: ' + score);
             console.log('Level complete!');
         }
 
@@ -69,6 +109,15 @@
         if (this.ferry.x < -100) {
             this.ferry.x = 900;
         }
+
+        // Check if player falls off the dock
+        if (this.player.y > 550) {
+            gameOver = true;
+            this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#FFF' }).setOrigin(0.5);
+        }
+
+        // Update score display
+        document.getElementById('scoreDisplay').innerText = 'Score: ' + score;
     }
     </script>
 </body>
