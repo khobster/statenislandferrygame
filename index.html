@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ferry Chase</title>
+    <title>Mozzarella Toss</title>
     <style>
         body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
     </style>
@@ -27,72 +27,72 @@
     };
 
     const game = new Phaser.Game(config);
-    let player, ferry, dock;
-    let isJumping = false;
-    let jumpCount = 150;
-    let level = 1;
-    let ferryDistance = 300;
+    let player, cousin, mozzarella, ferry;
+    let score = 0;
+    let scoreText;
+    let gameOver = false;
 
     function preload() {
         this.load.image('background', 'background.png');
-        this.load.image('player', 'player.png');
         this.load.image('ferry', 'ferry.png');
-        this.load.image('dock', 'dock.png');
+        this.load.image('player', 'player.png');
+        this.load.image('cousin', 'cousin.png');
+        this.load.image('mozzarella', 'mozzarella.png');
     }
 
     function create() {
         this.add.image(400, 300, 'background');
-        
-        dock = this.add.image(400, 575, 'dock');
-        dock.setDisplaySize(800, 50);
+        ferry = this.add.image(400, 450, 'ferry');
 
-        player = this.physics.add.sprite(50, 450, 'player');
-        player.setDisplaySize(50, 100);
+        player = this.physics.add.sprite(700, 300, 'player');
         player.setCollideWorldBounds(true);
 
-        ferry = this.physics.add.image(800 + ferryDistance, 450, 'ferry');
-        ferry.setDisplaySize(200, 100);
+        cousin = this.physics.add.sprite(100, 500, 'cousin');
+        cousin.setVelocityX(50);  // Cousin moves slowly to the right
 
-        this.input.on('pointerdown', jump);
+        mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
+        mozzarella.setVisible(false);
+
+        scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
+
+        this.input.on('pointerdown', throwMozzarella);
     }
 
     function update() {
-        if (isJumping) {
-            if (jumpCount >= -150) {
-                player.y -= (jumpCount * Math.abs(jumpCount)) * 0.05;
-                jumpCount -= 5;
-            } else {
-                isJumping = false;
-                jumpCount = 150;
-                player.y = 450;  // Reset to ground level
-            }
+        if (gameOver) {
+            return;
         }
 
-        ferry.x -= 2;
+        // Move the ferry slowly to the right
+        ferry.x += 0.5;
+        player.x += 0.5;
 
-        if (Phaser.Geom.Intersects.RectangleToRectangle(player.getBounds(), ferry.getBounds())) {
-            console.log(`You caught the ferry! Level ${level} completed!`);
-            level++;
-            ferryDistance = Math.min(700, ferryDistance + 100);
-            resetGame();
-        }
+        // Move the cousin back and forth
+        if (cousin.x > 700) cousin.setVelocityX(-50);
+        if (cousin.x < 100) cousin.setVelocityX(50);
 
-        if (ferry.x < -100) {
-            resetGame();
+        // Check if mozzarella hits cousin
+        this.physics.add.overlap(mozzarella, cousin, hitCousin, null, this);
+
+        // Check if ferry has left the screen
+        if (ferry.x - ferry.width/2 > 800) {
+            gameOver = true;
+            this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
         }
     }
 
-    function jump() {
-        if (!isJumping) {
-            isJumping = true;
-        }
+    function throwMozzarella() {
+        if (gameOver) return;
+
+        mozzarella.setVisible(true);
+        mozzarella.setPosition(player.x, player.y);
+        this.physics.moveTo(mozzarella, cousin.x, cousin.y, 300);
     }
 
-    function resetGame() {
-        isJumping = false;
-        jumpCount = 150;
-        player.y = 450;
-        ferry.x = 800 + ferryDistance;
+    function hitCousin(mozzarella, cousin) {
+        mozzarella.setVisible(false);
+        score += 10;
+        scoreText.setText('Score: ' + score);
     }
     </script>
 </body>
