@@ -27,7 +27,7 @@
     };
 
     const game = new Phaser.Game(config);
-    let player, cousin, mozzarella, ferry, boat;
+    let player, cousin, mozzarella, ferry;
     let score = 0;
     let level = 1;
     let scoreText, levelText, instructionText;
@@ -46,7 +46,6 @@
         this.load.image('player', 'player.png');
         this.load.image('cousin', 'cousin.png');
         this.load.image('mozzarella', 'mozzarella.png');
-        this.load.image('boat', 'boat.png'); // Make sure to create a small boat image
     }
 
     function create() {
@@ -57,17 +56,12 @@
         player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y - 10, 'player');
         player.setScale(0.5);
 
-        cousin = this.add.sprite(100, 525, 'cousin');
-        cousin.setScale(0.5);
-
-        // Add a separate boat sprite for more precise collision
-        boat = this.physics.add.sprite(100, 540, 'boat');
-        boat.setScale(0.5);
-        boat.setSize(50, 20); // Adjust the collision box size
+        cousin = this.physics.add.sprite(100, 525, 'cousin');
+        cousin.setScale(1); // Adjust this value if needed
 
         mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
         mozzarella.setVisible(false);
-        mozzarella.setCircle(10); // Assuming mozzarella is roughly circular
+        mozzarella.setCircle(10); // Adjust based on your mozzarella image size
 
         scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
         levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
@@ -83,8 +77,6 @@
 
         this.input.on('pointerdown', startPowerUp);
         this.input.on('pointerup', throwMozzarella);
-
-        this.physics.add.overlap(mozzarella, boat, hitBoat, null, this);
     }
 
     function update() {
@@ -105,6 +97,10 @@
             if (mozzarella.y > 600 || mozzarella.x < 0 || mozzarella.x > 800) {
                 resetMozzarella();
             }
+        }
+
+        if (mozzarella.visible && Phaser.Geom.Intersects.RectangleToRectangle(mozzarella.getBounds(), cousin.getBounds())) {
+            hitCousin();
         }
 
         if (ferry.x - ferry.width/2 > 800) {
@@ -135,12 +131,12 @@
         mozzarella.setVisible(true);
         mozzarella.setPosition(player.x, player.y);
         
-        let angle = Phaser.Math.Angle.Between(player.x, player.y, boat.x, boat.y);
+        let angle = Phaser.Math.Angle.Between(player.x, player.y, cousin.x, cousin.y);
         
-        let throwSpeed = 200 + (power * 3);
+        let throwSpeed = 300 + (power * 4); // Increased base speed for more arc
         
         let velocityX = Math.cos(angle) * throwSpeed;
-        let velocityY = Math.sin(angle) * throwSpeed - 150;
+        let velocityY = Math.sin(angle) * throwSpeed - 200; // Increased upward velocity for more arc
         
         velocityX += Phaser.Math.Between(-20, 20);
         velocityY += Phaser.Math.Between(-20, 20);
@@ -148,12 +144,11 @@
         mozzarella.setVelocity(velocityX, velocityY);
     }
 
-    function hitBoat(mozzarella, boat) {
+    function hitCousin() {
         if (mozzarella.body.velocity.y > 0) { // Only count if mozzarella is falling down
             mozzarella.setVelocity(0, 0);
-            mozzarella.setY(boat.y - boat.height/2);
             this.time.delayedCall(500, () => { // Delay to show mozzarella in the boat
-                levelComplete.call(this);
+                levelComplete();
             });
         }
     }
@@ -168,7 +163,7 @@
         
         this.time.delayedCall(2000, () => {
             levelCompleteText.destroy();
-            nextLevel.call(this);
+            nextLevel();
         });
     }
 
@@ -184,9 +179,7 @@
         powerMeter.x = player.x;
         powerText.x = player.x;
 
-        let newBoatX = Math.min(100 + (level * 15), 650);
-        boat.x = newBoatX;
-        cousin.x = newBoatX;
+        cousin.x = Math.min(100 + (level * 15), 650);
         
         gameState = 'playing';
     }
