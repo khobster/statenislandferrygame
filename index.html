@@ -17,7 +17,7 @@
         height: 600,
         physics: {
             default: 'arcade',
-            arcade: { gravity: { y: 300 } }
+            arcade: { gravity: { y: 0 } }  // Remove gravity
         },
         scene: {
             preload: preload,
@@ -33,7 +33,6 @@
     let scoreText, levelText, instructionText;
     let gameOver = false;
     let ferrySpeed = 0.5;
-    let cousinSpeed = 50;
     let wind = 0;
 
     function preload() {
@@ -49,13 +48,10 @@
         
         ferry = this.add.image(200, 400, 'ferry');
 
-        // Adjust these values based on your ferry image
-        player = this.physics.add.sprite(300, 320, 'player');
-        player.setScale(0.5); // Adjust this value to make the player an appropriate size
-        player.setCollideWorldBounds(true);
+        player = this.add.sprite(300, 320, 'player');
+        player.setScale(0.5);
 
-        cousin = this.physics.add.sprite(100, 450, 'cousin');
-        cousin.setVelocityX(cousinSpeed);
+        cousin = this.add.sprite(100, 450, 'cousin');
 
         mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
         mozzarella.setVisible(false);
@@ -73,11 +69,6 @@
         ferry.x += ferrySpeed;
         player.x += ferrySpeed;
 
-        if (cousin.x > 700 || cousin.x < 100) {
-            cousinSpeed = -cousinSpeed;
-            cousin.setVelocityX(cousinSpeed);
-        }
-
         if (mozzarella.visible) {
             mozzarella.x += wind;
             // If mozzarella goes off screen, reset it
@@ -86,14 +77,15 @@
             }
         }
 
-        this.physics.add.overlap(mozzarella, cousin, hitCousin, null, this);
+        // Check for collision between mozzarella and cousin
+        if (mozzarella.visible && Phaser.Geom.Intersects.RectangleToRectangle(mozzarella.getBounds(), cousin.getBounds())) {
+            hitCousin();
+        }
 
         if (ferry.x - ferry.width/2 > 800) {
             gameOver = true;
             this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
         }
-
-        cousin.x += cousin.body.velocity.x / 60;
     }
 
     function throwMozzarella() {
@@ -108,7 +100,7 @@
         mozzarella.setVelocity(velocityX, velocityY);
     }
 
-    function hitCousin(mozzarella, cousin) {
+    function hitCousin() {
         resetMozzarella();
         score += 10;
         scoreText.setText('Score: ' + score);
@@ -117,7 +109,6 @@
         levelText.setText('Level: ' + level);
         
         ferrySpeed += 0.1;
-        cousinSpeed = (Math.abs(cousinSpeed) + 10) * Math.sign(cousinSpeed);
         wind = Phaser.Math.Between(-2, 2);
     }
 
