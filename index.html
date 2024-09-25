@@ -46,12 +46,12 @@
 
     function create() {
         this.add.image(400, 300, 'background');
-        ferry = this.add.image(400, 450, 'ferry');
+        ferry = this.add.image(200, 500, 'ferry');
 
-        player = this.physics.add.sprite(700, 300, 'player');
+        player = this.physics.add.sprite(350, 400, 'player');
         player.setCollideWorldBounds(true);
 
-        cousin = this.physics.add.sprite(100, 500, 'cousin');
+        cousin = this.physics.add.sprite(100, 550, 'cousin');
         cousin.setVelocityX(cousinSpeed);
 
         mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
