@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Precision Mozzarella Toss</title>
+    <title>Precision Mozzarella Toss Challenge</title>
     <style>
         body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
     </style>
@@ -17,7 +17,7 @@
         height: 600,
         physics: {
             default: 'arcade',
-            arcade: { gravity: { y: 200 } } // Reduced gravity for slower fall
+            arcade: { gravity: { y: 600 } } // Increased gravity for more pronounced arc
         },
         scene: {
             preload: preload,
@@ -53,8 +53,8 @@
         
         ferry = this.add.image(200, 400, 'ferry');
 
-        // Adjust the vertical position of the player
-        player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y + 50, 'player');
+        // Adjusted player position
+        player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y - 10, 'player');
         player.setScale(0.5);
 
         cousin = this.add.sprite(100, 525, 'cousin');
@@ -132,13 +132,13 @@
         
         let angle = Phaser.Math.Angle.Between(player.x, player.y, cousin.x, cousin.y);
         
-        let throwSpeed = 300 + (power * 3); // Adjusted for more control
+        let throwSpeed = 400 + (power * 4); // Increased base speed and power impact
         
         let velocityX = Math.cos(angle) * throwSpeed;
-        let velocityY = Math.sin(angle) * throwSpeed;
+        let velocityY = Math.sin(angle) * throwSpeed - 200; // Subtract to create upward arc
         
-        velocityX += Phaser.Math.Between(-20, 20);
-        velocityY += Phaser.Math.Between(-20, 20);
+        velocityX += Phaser.Math.Between(-30, 30);
+        velocityY += Phaser.Math.Between(-30, 30);
         
         mozzarella.setVelocity(velocityX, velocityY);
     }
@@ -160,13 +160,16 @@
         level++;
         levelText.setText('Level: ' + level);
         
-        ferrySpeed += 0.1;
-        wind = Phaser.Math.Between(-2, 2);
+        ferrySpeed += 0.2; // Increased speed increment
+        wind = Phaser.Math.Between(-3, 3); // Increased wind effect
 
         ferry.x = 200;
         player.x = ferry.x - ferry.width/2 + 50;
         powerMeter.x = player.x;
         powerText.x = player.x;
+
+        // Move cousin further away as levels progress
+        cousin.x = Math.min(100 + (level * 20), 700);
     }
 
     function resetMozzarella() {
