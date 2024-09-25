@@ -30,7 +30,7 @@
     let player, cousin, mozzarella, ferry;
     let score = 0;
     let level = 1;
-    let scoreText, levelText;
+    let scoreText, levelText, instructionText;
     let gameOver = false;
     let ferrySpeed = 0.5;
     let cousinSpeed = 50;
@@ -47,15 +47,12 @@
     function create() {
         this.add.image(400, 300, 'background');
         
-        // Adjusted ferry position
         ferry = this.add.image(200, 400, 'ferry');
 
-        // Adjusted player position
         player = this.physics.add.sprite(350, 320, 'player');
         player.setCollideWorldBounds(true);
 
-        // Adjusted cousin position
-        cousin = this.physics.add.sprite(100, 500, 'cousin');
+        cousin = this.physics.add.sprite(100, 450, 'cousin');
         cousin.setVelocityX(cousinSpeed);
 
         mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
@@ -63,6 +60,7 @@
 
         scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
         levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
+        instructionText = this.add.text(400, 100, 'Click to throw mozzarella!', { fontSize: '24px', fill: '#000' }).setOrigin(0.5);
 
         this.input.on('pointerdown', throwMozzarella);
     }
@@ -70,32 +68,30 @@
     function update() {
         if (gameOver) return;
 
-        // Move the ferry
         ferry.x += ferrySpeed;
         player.x += ferrySpeed;
 
-        // Move the cousin back and forth with varying speed
         if (cousin.x > 700 || cousin.x < 100) {
             cousinSpeed = -cousinSpeed;
             cousin.setVelocityX(cousinSpeed);
         }
 
-        // Apply wind to mozzarella
         if (mozzarella.visible) {
             mozzarella.x += wind;
+            // If mozzarella goes off screen, reset it
+            if (mozzarella.y > 600 || mozzarella.x < 0 || mozzarella.x > 800) {
+                resetMozzarella();
+            }
         }
 
-        // Check if mozzarella hits cousin
         this.physics.add.overlap(mozzarella, cousin, hitCousin, null, this);
 
-        // Check if ferry has left the screen
         if (ferry.x - ferry.width/2 > 800) {
             gameOver = true;
             this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
         }
 
-        // Update positions
-        cousin.x += cousin.body.velocity.x / 60;  // Smooth movement
+        cousin.x += cousin.body.velocity.x / 60;
     }
 
     function throwMozzarella() {
@@ -104,7 +100,6 @@
         mozzarella.setVisible(true);
         mozzarella.setPosition(player.x, player.y);
         
-        // Calculate velocity based on cousin's position and add randomness
         let velocityX = (cousin.x - player.x) / 2 + Phaser.Math.Between(-50, 50);
         let velocityY = (cousin.y - player.y) / 2 + Phaser.Math.Between(-50, 50);
         
@@ -112,21 +107,22 @@
     }
 
     function hitCousin(mozzarella, cousin) {
-        mozzarella.setVisible(false);
+        resetMozzarella();
         score += 10;
         scoreText.setText('Score: ' + score);
         
-        // Level up
         level++;
         levelText.setText('Level: ' + level);
         
-        // Increase difficulty
         ferrySpeed += 0.1;
         cousinSpeed = (Math.abs(cousinSpeed) + 10) * Math.sign(cousinSpeed);
-        wind = Phaser.Math.Between(-2, 2);  // Random wind each level
-        
-        // Reset mozzarella
+        wind = Phaser.Math.Between(-2, 2);
+    }
+
+    function resetMozzarella() {
+        mozzarella.setVisible(false);
         mozzarella.setPosition(player.x, player.y);
+        mozzarella.setVelocity(0, 0);
     }
     </script>
 </body>
