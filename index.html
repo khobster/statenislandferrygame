@@ -17,7 +17,7 @@
         height: 600,
         physics: {
             default: 'arcade',
-            arcade: { gravity: { y: 600 } } // Increased gravity for more pronounced arc
+            arcade: { gravity: { y: 300 } } // Reduced gravity for slower arc
         },
         scene: {
             preload: preload,
@@ -31,7 +31,7 @@
     let score = 0;
     let level = 1;
     let scoreText, levelText, instructionText;
-    let gameOver = false;
+    let gameState = 'playing'; // Can be 'playing', 'levelComplete', or 'gameOver'
     let ferrySpeed = 0.5;
     let wind = 0;
     let levelCompleteText;
@@ -53,7 +53,6 @@
         
         ferry = this.add.image(200, 400, 'ferry');
 
-        // Adjusted player position
         player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y - 10, 'player');
         player.setScale(0.5);
 
@@ -79,7 +78,7 @@
     }
 
     function update() {
-        if (gameOver) return;
+        if (gameState !== 'playing') return;
 
         ferry.x += ferrySpeed;
         player.x += ferrySpeed;
@@ -87,7 +86,7 @@
         powerText.x += ferrySpeed;
 
         if (isPoweringUp) {
-            power = (power + 2) % 100;
+            power = (power + 1) % 100; // Slower power increase
             updatePowerMeter();
         }
 
@@ -103,12 +102,12 @@
         }
 
         if (ferry.x - ferry.width/2 > 800) {
-            gameOver = true;
-            this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
+            gameOver();
         }
     }
 
     function startPowerUp() {
+        if (gameState !== 'playing') return;
         isPoweringUp = true;
         power = 0;
         powerMeter.setVisible(true);
@@ -121,7 +120,7 @@
     }
 
     function throwMozzarella() {
-        if (gameOver || !isPoweringUp) return;
+        if (gameState !== 'playing' || !isPoweringUp) return;
 
         isPoweringUp = false;
         powerMeter.setVisible(false);
@@ -132,13 +131,13 @@
         
         let angle = Phaser.Math.Angle.Between(player.x, player.y, cousin.x, cousin.y);
         
-        let throwSpeed = 400 + (power * 4); // Increased base speed and power impact
+        let throwSpeed = 200 + (power * 3); // Reduced base speed and power impact
         
         let velocityX = Math.cos(angle) * throwSpeed;
-        let velocityY = Math.sin(angle) * throwSpeed - 200; // Subtract to create upward arc
+        let velocityY = Math.sin(angle) * throwSpeed - 150; // Adjusted for slower upward arc
         
-        velocityX += Phaser.Math.Between(-30, 30);
-        velocityY += Phaser.Math.Between(-30, 30);
+        velocityX += Phaser.Math.Between(-20, 20);
+        velocityY += Phaser.Math.Between(-20, 20);
         
         mozzarella.setVelocity(velocityX, velocityY);
     }
@@ -148,6 +147,7 @@
         score += 10;
         scoreText.setText('Score: ' + score);
         
+        gameState = 'levelComplete';
         levelCompleteText = this.add.text(400, 300, 'Level Complete!', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
         
         this.time.delayedCall(2000, () => {
@@ -160,22 +160,31 @@
         level++;
         levelText.setText('Level: ' + level);
         
-        ferrySpeed += 0.2; // Increased speed increment
-        wind = Phaser.Math.Between(-3, 3); // Increased wind effect
+        ferrySpeed += 0.1;
+        wind = Phaser.Math.Between(-2, 2);
 
         ferry.x = 200;
         player.x = ferry.x - ferry.width/2 + 50;
         powerMeter.x = player.x;
         powerText.x = player.x;
 
-        // Move cousin further away as levels progress
-        cousin.x = Math.min(100 + (level * 20), 700);
+        cousin.x = Math.min(100 + (level * 15), 650); // Slower cousin movement
+        
+        gameState = 'playing';
     }
 
     function resetMozzarella() {
         mozzarella.setVisible(false);
         mozzarella.setPosition(player.x, player.y);
         mozzarella.setVelocity(0, 0);
+    }
+
+    function gameOver() {
+        gameState = 'gameOver';
+        this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
+        this.time.delayedCall(3000, () => {
+            location.reload(); // Restart the game after 3 seconds
+        });
     }
     </script>
 </body>
