@@ -17,7 +17,7 @@
         height: 600,
         physics: {
             default: 'arcade',
-            arcade: { gravity: { y: 300 }, debug: false }
+            arcade: { gravity: { y: 600 }, debug: true }
         },
         scene: {
             preload: preload,
@@ -56,12 +56,12 @@
         player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y - 10, 'player');
         player.setScale(0.5);
 
-        cousin = this.physics.add.sprite(100, 525, 'cousin');
-        cousin.setScale(1); // Adjust this value if needed
+        cousin = this.physics.add.staticImage(100, 525, 'cousin');
+        cousin.setScale(1);
 
         mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
         mozzarella.setVisible(false);
-        mozzarella.setCircle(10); // Adjust based on your mozzarella image size
+        mozzarella.setCircle(10);
 
         scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
         levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
@@ -77,6 +77,8 @@
 
         this.input.on('pointerdown', startPowerUp);
         this.input.on('pointerup', throwMozzarella);
+
+        console.log('Game created. Cousin position:', cousin.x, cousin.y);
     }
 
     function update() {
@@ -133,21 +135,21 @@
         
         let angle = Phaser.Math.Angle.Between(player.x, player.y, cousin.x, cousin.y);
         
-        let throwSpeed = 300 + (power * 4); // Increased base speed for more arc
+        let throwSpeed = 400 + (power * 5);
         
         let velocityX = Math.cos(angle) * throwSpeed;
-        let velocityY = Math.sin(angle) * throwSpeed - 200; // Increased upward velocity for more arc
-        
-        velocityX += Phaser.Math.Between(-20, 20);
-        velocityY += Phaser.Math.Between(-20, 20);
+        let velocityY = Math.sin(angle) * throwSpeed - 300;
         
         mozzarella.setVelocity(velocityX, velocityY);
+
+        console.log('Mozzarella thrown. Velocity:', velocityX, velocityY);
     }
 
     function hitCousin() {
-        if (mozzarella.body.velocity.y > 0) { // Only count if mozzarella is falling down
+        console.log('Hit cousin!');
+        if (mozzarella.body.velocity.y > 0) {
             mozzarella.setVelocity(0, 0);
-            this.time.delayedCall(500, () => { // Delay to show mozzarella in the boat
+            this.time.delayedCall(500, () => {
                 levelComplete();
             });
         }
@@ -182,6 +184,8 @@
         cousin.x = Math.min(100 + (level * 15), 650);
         
         gameState = 'playing';
+
+        console.log('Next level. Cousin position:', cousin.x, cousin.y);
     }
 
     function resetMozzarella() {
