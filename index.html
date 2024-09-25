@@ -46,12 +46,16 @@
 
     function create() {
         this.add.image(400, 300, 'background');
-        ferry = this.add.image(200, 500, 'ferry');
+        
+        // Adjusted ferry position
+        ferry = this.add.image(200, 400, 'ferry');
 
-        player = this.physics.add.sprite(350, 400, 'player');
+        // Adjusted player position
+        player = this.physics.add.sprite(350, 320, 'player');
         player.setCollideWorldBounds(true);
 
-        cousin = this.physics.add.sprite(100, 550, 'cousin');
+        // Adjusted cousin position
+        cousin = this.physics.add.sprite(100, 500, 'cousin');
         cousin.setVelocityX(cousinSpeed);
 
         mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
