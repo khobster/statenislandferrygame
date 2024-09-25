@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Precision Mozzarella Toss Challenge</title>
+    <title>Mozzarella Toss Challenge</title>
     <style>
         body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
     </style>
@@ -17,7 +17,7 @@
         height: 600,
         physics: {
             default: 'arcade',
-            arcade: { gravity: { y: 600 }, debug: true }
+            arcade: { gravity: { y: 300 }, debug: false }
         },
         scene: {
             preload: preload,
@@ -31,10 +31,9 @@
     let score = 0;
     let level = 1;
     let scoreText, levelText, instructionText;
-    let gameState = 'playing';
+    let gameState = 'title';
     let ferrySpeed = 0.5;
     let wind = 0;
-    let levelCompleteText;
     let powerMeter;
     let powerText;
     let isPoweringUp = false;
@@ -51,34 +50,51 @@
     function create() {
         this.add.image(400, 300, 'background');
         
+        // Title Screen
+        let titleText = this.add.text(400, 200, 'Mozzarella Toss Challenge', { fontSize: '32px', fill: '#000' }).setOrigin(0.5);
+        let startButton = this.add.text(400, 300, 'Start Game', { fontSize: '24px', fill: '#000' })
+            .setOrigin(0.5)
+            .setInteractive()
+            .on('pointerdown', () => {
+                titleText.destroy();
+                startButton.destroy();
+                showInstructions();
+            });
+    }
+
+    function showInstructions() {
+        let instructionsText = this.add.text(400, 200, 
+            "Your cousin needs mozzarella!\nYou're on the ferry pulling away.\nGet it to him before it's too late!", 
+            { fontSize: '24px', fill: '#000', align: 'center' }
+        ).setOrigin(0.5);
+
+        let continueButton = this.add.text(400, 400, 'Continue', { fontSize: '24px', fill: '#000' })
+            .setOrigin(0.5)
+            .setInteractive()
+            .on('pointerdown', () => {
+                instructionsText.destroy();
+                continueButton.destroy();
+                startGame();
+            });
+    }
+
+    function startGame() {
         ferry = this.add.image(200, 400, 'ferry');
-
-        player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y - 10, 'player');
-        player.setScale(0.5);
-
-        cousin = this.physics.add.staticImage(100, 525, 'cousin');
-        cousin.setScale(1);
-
-        mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
-        mozzarella.setVisible(false);
-        mozzarella.setCircle(10);
+        player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y - 10, 'player').setScale(0.5);
+        cousin = this.physics.add.staticImage(100, 525, 'cousin').setScale(0.5);
+        mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella').setVisible(false);
 
         scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
         levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
         instructionText = this.add.text(400, 100, 'Click and hold to power up, release to throw!', { fontSize: '24px', fill: '#000' }).setOrigin(0.5);
 
-        powerMeter = this.add.rectangle(player.x, player.y - 50, 100, 10, 0xff0000);
-        powerMeter.setOrigin(0, 0.5);
-        powerMeter.setVisible(false);
-
-        powerText = this.add.text(player.x, player.y - 70, 'Power: 0%', { fontSize: '16px', fill: '#000' });
-        powerText.setOrigin(0.5);
-        powerText.setVisible(false);
+        powerMeter = this.add.rectangle(player.x, player.y - 50, 100, 10, 0xff0000).setOrigin(0, 0.5).setVisible(false);
+        powerText = this.add.text(player.x, player.y - 70, 'Power: 0%', { fontSize: '16px', fill: '#000' }).setOrigin(0.5).setVisible(false);
 
         this.input.on('pointerdown', startPowerUp);
         this.input.on('pointerup', throwMozzarella);
 
-        console.log('Game created. Cousin position:', cousin.x, cousin.y);
+        gameState = 'playing';
     }
 
     function update() {
@@ -99,10 +115,9 @@
             if (mozzarella.y > 600 || mozzarella.x < 0 || mozzarella.x > 800) {
                 resetMozzarella();
             }
-        }
-
-        if (mozzarella.visible && Phaser.Geom.Intersects.RectangleToRectangle(mozzarella.getBounds(), cousin.getBounds())) {
-            hitCousin();
+            if (Phaser.Geom.Intersects.RectangleToRectangle(mozzarella.getBounds(), cousin.getBounds())) {
+                hitCousin();
+            }
         }
 
         if (ferry.x - ferry.width/2 > 800) {
@@ -134,21 +149,19 @@
         mozzarella.setPosition(player.x, player.y);
         
         let angle = Phaser.Math.Angle.Between(player.x, player.y, cousin.x, cousin.y);
-        
         let throwSpeed = 400 + (power * 5);
         
         let velocityX = Math.cos(angle) * throwSpeed;
         let velocityY = Math.sin(angle) * throwSpeed - 300;
         
         mozzarella.setVelocity(velocityX, velocityY);
-
-        console.log('Mozzarella thrown. Velocity:', velocityX, velocityY);
     }
 
     function hitCousin() {
-        console.log('Hit cousin!');
         if (mozzarella.body.velocity.y > 0) {
             mozzarella.setVelocity(0, 0);
+            score += 10;
+            scoreText.setText('Score: ' + score);
             this.time.delayedCall(500, () => {
                 levelComplete();
             });
@@ -156,36 +169,22 @@
     }
 
     function levelComplete() {
-        resetMozzarella();
-        score += 10;
-        scoreText.setText('Score: ' + score);
-        
-        gameState = 'levelComplete';
-        levelCompleteText = this.add.text(400, 300, 'Level Complete!', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
-        
-        this.time.delayedCall(2000, () => {
-            levelCompleteText.destroy();
-            nextLevel();
-        });
-    }
-
-    function nextLevel() {
         level++;
         levelText.setText('Level: ' + level);
         
         ferrySpeed += 0.1;
         wind = Phaser.Math.Between(-2, 2);
 
+        resetPositions();
+    }
+
+    function resetPositions() {
         ferry.x = 200;
         player.x = ferry.x - ferry.width/2 + 50;
         powerMeter.x = player.x;
         powerText.x = player.x;
-
         cousin.x = Math.min(100 + (level * 15), 650);
-        
-        gameState = 'playing';
-
-        console.log('Next level. Cousin position:', cousin.x, cousin.y);
+        resetMozzarella();
     }
 
     function resetMozzarella() {
