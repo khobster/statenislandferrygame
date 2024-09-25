@@ -17,7 +17,7 @@
         height: 600,
         physics: {
             default: 'arcade',
-            arcade: { gravity: { y: 300 } }
+            arcade: { gravity: { y: 200 } } // Reduced gravity for slower fall
         },
         scene: {
             preload: preload,
@@ -35,6 +35,10 @@
     let ferrySpeed = 0.5;
     let wind = 0;
     let levelCompleteText;
+    let powerMeter;
+    let powerText;
+    let isPoweringUp = false;
+    let power = 0;
 
     function preload() {
         this.load.image('background', 'background.png');
@@ -49,11 +53,10 @@
         
         ferry = this.add.image(200, 400, 'ferry');
 
-        // Adjust these values to fine-tune the player's position on the ferry
-        player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y - ferry.height/2 + 30, 'player');
+        // Adjust the vertical position of the player
+        player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y + 50, 'player');
         player.setScale(0.5);
 
-        // Moved the cousin lower on the screen
         cousin = this.add.sprite(100, 525, 'cousin');
 
         mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
@@ -61,9 +64,18 @@
 
         scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
         levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
-        instructionText = this.add.text(400, 100, 'Click to throw mozzarella!', { fontSize: '24px', fill: '#000' }).setOrigin(0.5);
+        instructionText = this.add.text(400, 100, 'Click and hold to power up, release to throw!', { fontSize: '24px', fill: '#000' }).setOrigin(0.5);
 
-        this.input.on('pointerdown', throwMozzarella);
+        powerMeter = this.add.rectangle(player.x, player.y - 50, 100, 10, 0xff0000);
+        powerMeter.setOrigin(0, 0.5);
+        powerMeter.setVisible(false);
+
+        powerText = this.add.text(player.x, player.y - 70, 'Power: 0%', { fontSize: '16px', fill: '#000' });
+        powerText.setOrigin(0.5);
+        powerText.setVisible(false);
+
+        this.input.on('pointerdown', startPowerUp);
+        this.input.on('pointerup', throwMozzarella);
     }
 
     function update() {
@@ -71,6 +83,13 @@
 
         ferry.x += ferrySpeed;
         player.x += ferrySpeed;
+        powerMeter.x += ferrySpeed;
+        powerText.x += ferrySpeed;
+
+        if (isPoweringUp) {
+            power = (power + 2) % 100;
+            updatePowerMeter();
+        }
 
         if (mozzarella.visible) {
             mozzarella.x += wind;
@@ -89,25 +108,37 @@
         }
     }
 
+    function startPowerUp() {
+        isPoweringUp = true;
+        power = 0;
+        powerMeter.setVisible(true);
+        powerText.setVisible(true);
+    }
+
+    function updatePowerMeter() {
+        powerMeter.width = power;
+        powerText.setText(`Power: ${power}%`);
+    }
+
     function throwMozzarella() {
-        if (gameOver || mozzarella.visible) return;
+        if (gameOver || !isPoweringUp) return;
+
+        isPoweringUp = false;
+        powerMeter.setVisible(false);
+        powerText.setVisible(false);
 
         mozzarella.setVisible(true);
         mozzarella.setPosition(player.x, player.y);
         
-        // Calculate the angle to the cousin
         let angle = Phaser.Math.Angle.Between(player.x, player.y, cousin.x, cousin.y);
         
-        // Set a fixed throw speed
-        let throwSpeed = 400;
+        let throwSpeed = 300 + (power * 3); // Adjusted for more control
         
-        // Calculate velocity components
         let velocityX = Math.cos(angle) * throwSpeed;
         let velocityY = Math.sin(angle) * throwSpeed;
         
-        // Add some randomness
-        velocityX += Phaser.Math.Between(-50, 50);
-        velocityY += Phaser.Math.Between(-50, 50);
+        velocityX += Phaser.Math.Between(-20, 20);
+        velocityY += Phaser.Math.Between(-20, 20);
         
         mozzarella.setVelocity(velocityX, velocityY);
     }
@@ -132,9 +163,10 @@
         ferrySpeed += 0.1;
         wind = Phaser.Math.Between(-2, 2);
 
-        // Reset positions
         ferry.x = 200;
         player.x = ferry.x - ferry.width/2 + 50;
+        powerMeter.x = player.x;
+        powerText.x = player.x;
     }
 
     function resetMozzarella() {
