@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mozzarella Toss</title>
+    <title>Precision Mozzarella Toss</title>
     <style>
         body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
     </style>
@@ -29,8 +29,12 @@
     const game = new Phaser.Game(config);
     let player, cousin, mozzarella, ferry;
     let score = 0;
-    let scoreText;
+    let level = 1;
+    let scoreText, levelText;
     let gameOver = false;
+    let ferrySpeed = 0.5;
+    let cousinSpeed = 50;
+    let wind = 0;
 
     function preload() {
         this.load.image('background', 'background.png');
@@ -48,28 +52,34 @@
         player.setCollideWorldBounds(true);
 
         cousin = this.physics.add.sprite(100, 500, 'cousin');
-        cousin.setVelocityX(50);  // Cousin moves slowly to the right
+        cousin.setVelocityX(cousinSpeed);
 
         mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
         mozzarella.setVisible(false);
 
         scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
+        levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
 
         this.input.on('pointerdown', throwMozzarella);
     }
 
     function update() {
-        if (gameOver) {
-            return;
+        if (gameOver) return;
+
+        // Move the ferry
+        ferry.x += ferrySpeed;
+        player.x += ferrySpeed;
+
+        // Move the cousin back and forth with varying speed
+        if (cousin.x > 700 || cousin.x < 100) {
+            cousinSpeed = -cousinSpeed;
+            cousin.setVelocityX(cousinSpeed);
         }
 
-        // Move the ferry slowly to the right
-        ferry.x += 0.5;
-        player.x += 0.5;
-
-        // Move the cousin back and forth
-        if (cousin.x > 700) cousin.setVelocityX(-50);
-        if (cousin.x < 100) cousin.setVelocityX(50);
+        // Apply wind to mozzarella
+        if (mozzarella.visible) {
+            mozzarella.x += wind;
+        }
 
         // Check if mozzarella hits cousin
         this.physics.add.overlap(mozzarella, cousin, hitCousin, null, this);
@@ -79,20 +89,40 @@
             gameOver = true;
             this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
         }
+
+        // Update positions
+        cousin.x += cousin.body.velocity.x / 60;  // Smooth movement
     }
 
     function throwMozzarella() {
-        if (gameOver) return;
+        if (gameOver || mozzarella.visible) return;
 
         mozzarella.setVisible(true);
         mozzarella.setPosition(player.x, player.y);
-        this.physics.moveTo(mozzarella, cousin.x, cousin.y, 300);
+        
+        // Calculate velocity based on cousin's position and add randomness
+        let velocityX = (cousin.x - player.x) / 2 + Phaser.Math.Between(-50, 50);
+        let velocityY = (cousin.y - player.y) / 2 + Phaser.Math.Between(-50, 50);
+        
+        mozzarella.setVelocity(velocityX, velocityY);
     }
 
     function hitCousin(mozzarella, cousin) {
         mozzarella.setVisible(false);
         score += 10;
         scoreText.setText('Score: ' + score);
+        
+        // Level up
+        level++;
+        levelText.setText('Level: ' + level);
+        
+        // Increase difficulty
+        ferrySpeed += 0.1;
+        cousinSpeed = (Math.abs(cousinSpeed) + 10) * Math.sign(cousinSpeed);
+        wind = Phaser.Math.Between(-2, 2);  // Random wind each level
+        
+        // Reset mozzarella
+        mozzarella.setPosition(player.x, player.y);
     }
     </script>
 </body>
