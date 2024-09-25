@@ -49,7 +49,9 @@
         
         ferry = this.add.image(200, 400, 'ferry');
 
-        player = this.physics.add.sprite(350, 320, 'player');
+        // Adjust these values based on your ferry image
+        player = this.physics.add.sprite(300, 320, 'player');
+        player.setScale(0.5); // Adjust this value to make the player an appropriate size
         player.setCollideWorldBounds(true);
 
         cousin = this.physics.add.sprite(100, 450, 'cousin');
