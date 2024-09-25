@@ -17,7 +17,7 @@
         height: 600,
         physics: {
             default: 'arcade',
-            arcade: { gravity: { y: 300 } } // Reduced gravity for slower arc
+            arcade: { gravity: { y: 300 }, debug: false }
         },
         scene: {
             preload: preload,
@@ -27,11 +27,11 @@
     };
 
     const game = new Phaser.Game(config);
-    let player, cousin, mozzarella, ferry;
+    let player, cousin, mozzarella, ferry, boat;
     let score = 0;
     let level = 1;
     let scoreText, levelText, instructionText;
-    let gameState = 'playing'; // Can be 'playing', 'levelComplete', or 'gameOver'
+    let gameState = 'playing';
     let ferrySpeed = 0.5;
     let wind = 0;
     let levelCompleteText;
@@ -46,6 +46,7 @@
         this.load.image('player', 'player.png');
         this.load.image('cousin', 'cousin.png');
         this.load.image('mozzarella', 'mozzarella.png');
+        this.load.image('boat', 'boat.png'); // Make sure to create a small boat image
     }
 
     function create() {
@@ -57,9 +58,16 @@
         player.setScale(0.5);
 
         cousin = this.add.sprite(100, 525, 'cousin');
+        cousin.setScale(0.5);
+
+        // Add a separate boat sprite for more precise collision
+        boat = this.physics.add.sprite(100, 540, 'boat');
+        boat.setScale(0.5);
+        boat.setSize(50, 20); // Adjust the collision box size
 
         mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
         mozzarella.setVisible(false);
+        mozzarella.setCircle(10); // Assuming mozzarella is roughly circular
 
         scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
         levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
@@ -75,6 +83,8 @@
 
         this.input.on('pointerdown', startPowerUp);
         this.input.on('pointerup', throwMozzarella);
+
+        this.physics.add.overlap(mozzarella, boat, hitBoat, null, this);
     }
 
     function update() {
@@ -86,7 +96,7 @@
         powerText.x += ferrySpeed;
 
         if (isPoweringUp) {
-            power = (power + 1) % 100; // Slower power increase
+            power = (power + 1) % 100;
             updatePowerMeter();
         }
 
@@ -95,10 +105,6 @@
             if (mozzarella.y > 600 || mozzarella.x < 0 || mozzarella.x > 800) {
                 resetMozzarella();
             }
-        }
-
-        if (mozzarella.visible && Phaser.Geom.Intersects.RectangleToRectangle(mozzarella.getBounds(), cousin.getBounds())) {
-            hitCousin.call(this);
         }
 
         if (ferry.x - ferry.width/2 > 800) {
@@ -129,12 +135,12 @@
         mozzarella.setVisible(true);
         mozzarella.setPosition(player.x, player.y);
         
-        let angle = Phaser.Math.Angle.Between(player.x, player.y, cousin.x, cousin.y);
+        let angle = Phaser.Math.Angle.Between(player.x, player.y, boat.x, boat.y);
         
-        let throwSpeed = 200 + (power * 3); // Reduced base speed and power impact
+        let throwSpeed = 200 + (power * 3);
         
         let velocityX = Math.cos(angle) * throwSpeed;
-        let velocityY = Math.sin(angle) * throwSpeed - 150; // Adjusted for slower upward arc
+        let velocityY = Math.sin(angle) * throwSpeed - 150;
         
         velocityX += Phaser.Math.Between(-20, 20);
         velocityY += Phaser.Math.Between(-20, 20);
@@ -142,7 +148,17 @@
         mozzarella.setVelocity(velocityX, velocityY);
     }
 
-    function hitCousin() {
+    function hitBoat(mozzarella, boat) {
+        if (mozzarella.body.velocity.y > 0) { // Only count if mozzarella is falling down
+            mozzarella.setVelocity(0, 0);
+            mozzarella.setY(boat.y - boat.height/2);
+            this.time.delayedCall(500, () => { // Delay to show mozzarella in the boat
+                levelComplete.call(this);
+            });
+        }
+    }
+
+    function levelComplete() {
         resetMozzarella();
         score += 10;
         scoreText.setText('Score: ' + score);
@@ -168,7 +184,9 @@
         powerMeter.x = player.x;
         powerText.x = player.x;
 
-        cousin.x = Math.min(100 + (level * 15), 650); // Slower cousin movement
+        let newBoatX = Math.min(100 + (level * 15), 650);
+        boat.x = newBoatX;
+        cousin.x = newBoatX;
         
         gameState = 'playing';
     }
@@ -183,7 +201,7 @@
         gameState = 'gameOver';
         this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
         this.time.delayedCall(3000, () => {
-            location.reload(); // Restart the game after 3 seconds
+            location.reload();
         });
     }
     </script>
