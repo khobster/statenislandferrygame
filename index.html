@@ -17,7 +17,7 @@
         height: 600,
         physics: {
             default: 'arcade',
-            arcade: { gravity: { y: 300 } } // Re-enable gravity for the mozzarella arc
+            arcade: { gravity: { y: 300 } }
         },
         scene: {
             preload: preload,
@@ -53,7 +53,8 @@
         player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y - ferry.height/2 + 30, 'player');
         player.setScale(0.5);
 
-        cousin = this.add.sprite(100, 450, 'cousin');
+        // Moved the cousin lower on the screen
+        cousin = this.add.sprite(100, 525, 'cousin');
 
         mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella');
         mozzarella.setVisible(false);
