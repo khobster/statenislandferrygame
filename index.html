@@ -11,6 +11,178 @@
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
     <script>
+    class GameScene extends Phaser.Scene {
+        constructor() {
+            super('GameScene');
+        }
+
+        preload() {
+            this.load.image('background', 'background.png');
+            this.load.image('ferry', 'ferry.png');
+            this.load.image('player', 'player.png');
+            this.load.image('cousin', 'cousin.png');
+            this.load.image('mozzarella', 'mozzarella.png');
+        }
+
+        create() {
+            this.add.image(400, 300, 'background');
+            this.showTitleScreen();
+        }
+
+        showTitleScreen() {
+            this.titleText = this.add.text(400, 200, 'Mozzarella Toss Challenge', { fontSize: '32px', fill: '#000' }).setOrigin(0.5);
+            this.startButton = this.add.text(400, 300, 'Start Game', { fontSize: '24px', fill: '#000' })
+                .setOrigin(0.5)
+                .setInteractive()
+                .on('pointerdown', () => this.showInstructions());
+        }
+
+        showInstructions() {
+            this.titleText.destroy();
+            this.startButton.destroy();
+
+            this.instructionsText = this.add.text(400, 200, 
+                "Your cousin needs mozzarella!\nYou're on the ferry pulling away.\nGet it to him before it's too late!", 
+                { fontSize: '24px', fill: '#000', align: 'center' }
+            ).setOrigin(0.5);
+
+            this.continueButton = this.add.text(400, 400, 'Continue', { fontSize: '24px', fill: '#000' })
+                .setOrigin(0.5)
+                .setInteractive()
+                .on('pointerdown', () => this.startGame());
+        }
+
+        startGame() {
+            if (this.instructionsText) this.instructionsText.destroy();
+            if (this.continueButton) this.continueButton.destroy();
+
+            this.ferry = this.add.image(200, 400, 'ferry');
+            this.player = this.add.sprite(this.ferry.x - this.ferry.width/2 + 50, this.ferry.y - 10, 'player').setScale(0.5);
+            this.cousin = this.physics.add.staticImage(100, 525, 'cousin').setScale(0.5);
+            this.mozzarella = this.physics.add.sprite(this.player.x, this.player.y, 'mozzarella').setVisible(false);
+
+            this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
+            this.levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
+            this.instructionText = this.add.text(400, 100, 'Click and hold to power up, release to throw!', { fontSize: '24px', fill: '#000' }).setOrigin(0.5);
+
+            this.powerMeter = this.add.rectangle(this.player.x, this.player.y - 50, 100, 10, 0xff0000).setOrigin(0, 0.5).setVisible(false);
+            this.powerText = this.add.text(this.player.x, this.player.y - 70, 'Power: 0%', { fontSize: '16px', fill: '#000' }).setOrigin(0.5).setVisible(false);
+
+            this.input.on('pointerdown', this.startPowerUp, this);
+            this.input.on('pointerup', this.throwMozzarella, this);
+
+            this.score = 0;
+            this.level = 1;
+            this.ferrySpeed = 0.5;
+            this.wind = 0;
+            this.gameState = 'playing';
+        }
+
+        update() {
+            if (this.gameState !== 'playing') return;
+
+            this.ferry.x += this.ferrySpeed;
+            this.player.x += this.ferrySpeed;
+            this.powerMeter.x += this.ferrySpeed;
+            this.powerText.x += this.ferrySpeed;
+
+            if (this.isPoweringUp) {
+                this.power = (this.power + 1) % 100;
+                this.updatePowerMeter();
+            }
+
+            if (this.mozzarella.visible) {
+                this.mozzarella.x += this.wind;
+                if (this.mozzarella.y > 600 || this.mozzarella.x < 0 || this.mozzarella.x > 800) {
+                    this.resetMozzarella();
+                }
+                if (Phaser.Geom.Intersects.RectangleToRectangle(this.mozzarella.getBounds(), this.cousin.getBounds())) {
+                    this.hitCousin();
+                }
+            }
+
+            if (this.ferry.x - this.ferry.width/2 > 800) {
+                this.gameOver();
+            }
+        }
+
+        startPowerUp() {
+            if (this.gameState !== 'playing') return;
+            this.isPoweringUp = true;
+            this.power = 0;
+            this.powerMeter.setVisible(true);
+            this.powerText.setVisible(true);
+        }
+
+        updatePowerMeter() {
+            this.powerMeter.width = this.power;
+            this.powerText.setText(`Power: ${this.power}%`);
+        }
+
+        throwMozzarella() {
+            if (this.gameState !== 'playing' || !this.isPoweringUp) return;
+
+            this.isPoweringUp = false;
+            this.powerMeter.setVisible(false);
+            this.powerText.setVisible(false);
+
+            this.mozzarella.setVisible(true);
+            this.mozzarella.setPosition(this.player.x, this.player.y);
+            
+            let angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.cousin.x, this.cousin.y);
+            let throwSpeed = 400 + (this.power * 5);
+            
+            let velocityX = Math.cos(angle) * throwSpeed;
+            let velocityY = Math.sin(angle) * throwSpeed - 300;
+            
+            this.mozzarella.setVelocity(velocityX, velocityY);
+        }
+
+        hitCousin() {
+            if (this.mozzarella.body.velocity.y > 0) {
+                this.mozzarella.setVelocity(0, 0);
+                this.score += 10;
+                this.scoreText.setText('Score: ' + this.score);
+                this.time.delayedCall(500, () => {
+                    this.levelComplete();
+                });
+            }
+        }
+
+        levelComplete() {
+            this.level++;
+            this.levelText.setText('Level: ' + this.level);
+            
+            this.ferrySpeed += 0.1;
+            this.wind = Phaser.Math.Between(-2, 2);
+
+            this.resetPositions();
+        }
+
+        resetPositions() {
+            this.ferry.x = 200;
+            this.player.x = this.ferry.x - this.ferry.width/2 + 50;
+            this.powerMeter.x = this.player.x;
+            this.powerText.x = this.player.x;
+            this.cousin.x = Math.min(100 + (this.level * 15), 650);
+            this.resetMozzarella();
+        }
+
+        resetMozzarella() {
+            this.mozzarella.setVisible(false);
+            this.mozzarella.setPosition(this.player.x, this.player.y);
+            this.mozzarella.setVelocity(0, 0);
+        }
+
+        gameOver() {
+            this.gameState = 'gameOver';
+            this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
+            this.time.delayedCall(3000, () => {
+                this.scene.restart();
+            });
+        }
+    }
+
     const config = {
         type: Phaser.AUTO,
         width: 800,
@@ -19,187 +191,10 @@
             default: 'arcade',
             arcade: { gravity: { y: 300 }, debug: false }
         },
-        scene: {
-            preload: preload,
-            create: create,
-            update: update
-        }
+        scene: GameScene
     };
 
-    const game = new Phaser.Game(config);
-    let player, cousin, mozzarella, ferry;
-    let score = 0;
-    let level = 1;
-    let scoreText, levelText, instructionText;
-    let gameState = 'title';
-    let ferrySpeed = 0.5;
-    let wind = 0;
-    let powerMeter;
-    let powerText;
-    let isPoweringUp = false;
-    let power = 0;
-
-    function preload() {
-        this.load.image('background', 'background.png');
-        this.load.image('ferry', 'ferry.png');
-        this.load.image('player', 'player.png');
-        this.load.image('cousin', 'cousin.png');
-        this.load.image('mozzarella', 'mozzarella.png');
-    }
-
-    function create() {
-        this.add.image(400, 300, 'background');
-        
-        // Title Screen
-        let titleText = this.add.text(400, 200, 'Mozzarella Toss Challenge', { fontSize: '32px', fill: '#000' }).setOrigin(0.5);
-        let startButton = this.add.text(400, 300, 'Start Game', { fontSize: '24px', fill: '#000' })
-            .setOrigin(0.5)
-            .setInteractive()
-            .on('pointerdown', () => {
-                titleText.destroy();
-                startButton.destroy();
-                showInstructions();
-            });
-    }
-
-    function showInstructions() {
-        let instructionsText = this.add.text(400, 200, 
-            "Your cousin needs mozzarella!\nYou're on the ferry pulling away.\nGet it to him before it's too late!", 
-            { fontSize: '24px', fill: '#000', align: 'center' }
-        ).setOrigin(0.5);
-
-        let continueButton = this.add.text(400, 400, 'Continue', { fontSize: '24px', fill: '#000' })
-            .setOrigin(0.5)
-            .setInteractive()
-            .on('pointerdown', () => {
-                instructionsText.destroy();
-                continueButton.destroy();
-                startGame();
-            });
-    }
-
-    function startGame() {
-        ferry = this.add.image(200, 400, 'ferry');
-        player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y - 10, 'player').setScale(0.5);
-        cousin = this.physics.add.staticImage(100, 525, 'cousin').setScale(0.5);
-        mozzarella = this.physics.add.sprite(player.x, player.y, 'mozzarella').setVisible(false);
-
-        scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
-        levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
-        instructionText = this.add.text(400, 100, 'Click and hold to power up, release to throw!', { fontSize: '24px', fill: '#000' }).setOrigin(0.5);
-
-        powerMeter = this.add.rectangle(player.x, player.y - 50, 100, 10, 0xff0000).setOrigin(0, 0.5).setVisible(false);
-        powerText = this.add.text(player.x, player.y - 70, 'Power: 0%', { fontSize: '16px', fill: '#000' }).setOrigin(0.5).setVisible(false);
-
-        this.input.on('pointerdown', startPowerUp);
-        this.input.on('pointerup', throwMozzarella);
-
-        gameState = 'playing';
-    }
-
-    function update() {
-        if (gameState !== 'playing') return;
-
-        ferry.x += ferrySpeed;
-        player.x += ferrySpeed;
-        powerMeter.x += ferrySpeed;
-        powerText.x += ferrySpeed;
-
-        if (isPoweringUp) {
-            power = (power + 1) % 100;
-            updatePowerMeter();
-        }
-
-        if (mozzarella.visible) {
-            mozzarella.x += wind;
-            if (mozzarella.y > 600 || mozzarella.x < 0 || mozzarella.x > 800) {
-                resetMozzarella();
-            }
-            if (Phaser.Geom.Intersects.RectangleToRectangle(mozzarella.getBounds(), cousin.getBounds())) {
-                hitCousin();
-            }
-        }
-
-        if (ferry.x - ferry.width/2 > 800) {
-            gameOver();
-        }
-    }
-
-    function startPowerUp() {
-        if (gameState !== 'playing') return;
-        isPoweringUp = true;
-        power = 0;
-        powerMeter.setVisible(true);
-        powerText.setVisible(true);
-    }
-
-    function updatePowerMeter() {
-        powerMeter.width = power;
-        powerText.setText(`Power: ${power}%`);
-    }
-
-    function throwMozzarella() {
-        if (gameState !== 'playing' || !isPoweringUp) return;
-
-        isPoweringUp = false;
-        powerMeter.setVisible(false);
-        powerText.setVisible(false);
-
-        mozzarella.setVisible(true);
-        mozzarella.setPosition(player.x, player.y);
-        
-        let angle = Phaser.Math.Angle.Between(player.x, player.y, cousin.x, cousin.y);
-        let throwSpeed = 400 + (power * 5);
-        
-        let velocityX = Math.cos(angle) * throwSpeed;
-        let velocityY = Math.sin(angle) * throwSpeed - 300;
-        
-        mozzarella.setVelocity(velocityX, velocityY);
-    }
-
-    function hitCousin() {
-        if (mozzarella.body.velocity.y > 0) {
-            mozzarella.setVelocity(0, 0);
-            score += 10;
-            scoreText.setText('Score: ' + score);
-            this.time.delayedCall(500, () => {
-                levelComplete();
-            });
-        }
-    }
-
-    function levelComplete() {
-        level++;
-        levelText.setText('Level: ' + level);
-        
-        ferrySpeed += 0.1;
-        wind = Phaser.Math.Between(-2, 2);
-
-        resetPositions();
-    }
-
-    function resetPositions() {
-        ferry.x = 200;
-        player.x = ferry.x - ferry.width/2 + 50;
-        powerMeter.x = player.x;
-        powerText.x = player.x;
-        cousin.x = Math.min(100 + (level * 15), 650);
-        resetMozzarella();
-    }
-
-    function resetMozzarella() {
-        mozzarella.setVisible(false);
-        mozzarella.setPosition(player.x, player.y);
-        mozzarella.setVelocity(0, 0);
-    }
-
-    function gameOver() {
-        gameState = 'gameOver';
-        this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
-        this.time.delayedCall(3000, () => {
-            location.reload();
-        });
-    }
+    new Phaser.Game(config);
     </script>
 </body>
 </html>
