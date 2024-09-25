@@ -17,7 +17,7 @@
         height: 600,
         physics: {
             default: 'arcade',
-            arcade: { gravity: { y: 0 } }  // Remove gravity
+            arcade: { gravity: { y: 300 } } // Re-enable gravity for the mozzarella arc
         },
         scene: {
             preload: preload,
@@ -34,6 +34,7 @@
     let gameOver = false;
     let ferrySpeed = 0.5;
     let wind = 0;
+    let levelCompleteText;
 
     function preload() {
         this.load.image('background', 'background.png');
@@ -48,7 +49,8 @@
         
         ferry = this.add.image(200, 400, 'ferry');
 
-        player = this.add.sprite(300, 320, 'player');
+        // Adjust these values to fine-tune the player's position on the ferry
+        player = this.add.sprite(ferry.x - ferry.width/2 + 50, ferry.y - ferry.height/2 + 30, 'player');
         player.setScale(0.5);
 
         cousin = this.add.sprite(100, 450, 'cousin');
@@ -71,15 +73,13 @@
 
         if (mozzarella.visible) {
             mozzarella.x += wind;
-            // If mozzarella goes off screen, reset it
             if (mozzarella.y > 600 || mozzarella.x < 0 || mozzarella.x > 800) {
                 resetMozzarella();
             }
         }
 
-        // Check for collision between mozzarella and cousin
         if (mozzarella.visible && Phaser.Geom.Intersects.RectangleToRectangle(mozzarella.getBounds(), cousin.getBounds())) {
-            hitCousin();
+            hitCousin.call(this);
         }
 
         if (ferry.x - ferry.width/2 > 800) {
@@ -94,8 +94,19 @@
         mozzarella.setVisible(true);
         mozzarella.setPosition(player.x, player.y);
         
-        let velocityX = (cousin.x - player.x) / 2 + Phaser.Math.Between(-50, 50);
-        let velocityY = (cousin.y - player.y) / 2 + Phaser.Math.Between(-50, 50);
+        // Calculate the angle to the cousin
+        let angle = Phaser.Math.Angle.Between(player.x, player.y, cousin.x, cousin.y);
+        
+        // Set a fixed throw speed
+        let throwSpeed = 400;
+        
+        // Calculate velocity components
+        let velocityX = Math.cos(angle) * throwSpeed;
+        let velocityY = Math.sin(angle) * throwSpeed;
+        
+        // Add some randomness
+        velocityX += Phaser.Math.Between(-50, 50);
+        velocityY += Phaser.Math.Between(-50, 50);
         
         mozzarella.setVelocity(velocityX, velocityY);
     }
@@ -105,11 +116,24 @@
         score += 10;
         scoreText.setText('Score: ' + score);
         
+        levelCompleteText = this.add.text(400, 300, 'Level Complete!', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
+        
+        this.time.delayedCall(2000, () => {
+            levelCompleteText.destroy();
+            nextLevel.call(this);
+        });
+    }
+
+    function nextLevel() {
         level++;
         levelText.setText('Level: ' + level);
         
         ferrySpeed += 0.1;
         wind = Phaser.Math.Between(-2, 2);
+
+        // Reset positions
+        ferry.x = 200;
+        player.x = ferry.x - ferry.width/2 + 50;
     }
 
     function resetMozzarella() {
