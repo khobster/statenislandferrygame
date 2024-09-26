@@ -83,6 +83,7 @@
             this.ferrySpeed = 0.5;
             this.wind = 0;
             this.gameState = 'playing';
+            this.levelCompleting = false;
         }
 
         update() {
@@ -103,7 +104,7 @@
                 if (this.mozzarella.y > 600 || this.mozzarella.x < 0 || this.mozzarella.x > 800) {
                     this.resetMozzarella();
                 }
-                if (Phaser.Geom.Intersects.RectangleToRectangle(this.mozzarella.getBounds(), this.cousin.getBounds())) {
+                if (!this.levelCompleting && Phaser.Geom.Intersects.RectangleToRectangle(this.mozzarella.getBounds(), this.cousin.getBounds())) {
                     this.hitCousin();
                 }
             }
@@ -156,11 +157,12 @@
         }
 
         hitCousin() {
-            if (this.mozzarella.body.velocity.y > 0) {
+            if (this.mozzarella.body.velocity.y > 0 && !this.levelCompleting) {
+                this.levelCompleting = true;
                 this.mozzarella.setVelocity(0, 0);
                 this.score += 10;
                 this.scoreText.setText('Score: ' + this.score);
-                this.time.delayedCall(500, () => {
+                this.time.delayedCall(1000, () => {
                     this.levelComplete();
                 });
             }
@@ -174,6 +176,13 @@
             this.wind = Phaser.Math.Between(-3, 3);
 
             this.resetPositions();
+            this.levelCompleting = false;
+
+            // Display "Level Complete" message
+            let levelCompleteText = this.add.text(400, 300, 'Level Complete!', { fontSize: '48px', fill: '#000' }).setOrigin(0.5);
+            this.time.delayedCall(2000, () => {
+                levelCompleteText.destroy();
+            });
         }
 
         resetPositions() {
