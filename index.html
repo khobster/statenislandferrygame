@@ -19,7 +19,7 @@
         preload() {
             this.load.image('background', 'background.png');
             this.load.image('ferry', 'ferry.png');
-            this.load.image('arm', 'arm.png');  // New arm sprite
+            this.load.spritesheet('arm', 'arm_spritesheet.png', { frameWidth: 100, frameHeight: 200 });
             this.load.image('cousin', 'cousin.png');
             this.load.image('mozzarella', 'mozzarella.png');
         }
@@ -58,8 +58,15 @@
 
             this.ferry = this.add.image(200, 400, 'ferry');
             this.arm = this.add.sprite(this.ferry.x - this.ferry.width/2 + 50, this.ferry.y - 10, 'arm').setScale(0.5);
-            this.cousin = this.physics.add.staticImage(100, 525, 'cousin').setScale(1);  // Increased cousin scale
+            this.cousin = this.physics.add.staticImage(100, 525, 'cousin').setScale(1);
             this.mozzarella = this.physics.add.sprite(this.arm.x, this.arm.y, 'mozzarella').setVisible(false);
+
+            this.anims.create({
+                key: 'throw',
+                frames: this.anims.generateFrameNumbers('arm', { start: 0, end: 2 }),
+                frameRate: 10,
+                repeat: 0
+            });
 
             this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
             this.levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
@@ -87,7 +94,7 @@
             this.powerText.x += this.ferrySpeed;
 
             if (this.isPoweringUp) {
-                this.power = Math.min(100, this.power + 2);  // Faster power increase
+                this.power = Math.min(100, this.power + 2);
                 this.updatePowerMeter();
             }
 
@@ -112,6 +119,7 @@
             this.power = 0;
             this.powerMeter.setVisible(true);
             this.powerText.setVisible(true);
+            this.arm.setFrame(1);  // Set to wind-up frame
         }
 
         updatePowerMeter() {
@@ -126,20 +134,25 @@
             this.powerMeter.setVisible(false);
             this.powerText.setVisible(false);
 
+            this.arm.play('throw');
+
             this.mozzarella.setVisible(true);
             this.mozzarella.setPosition(this.arm.x, this.arm.y);
             
             let angle = Phaser.Math.Angle.Between(this.arm.x, this.arm.y, this.cousin.x, this.cousin.y);
-            let throwSpeed = 300 + (this.power * 4);  // Adjusted for more sensitivity
+            let throwSpeed = 300 + (this.power * 4);
             
-            // Add more variance to the throw
-            angle += Phaser.Math.FloatBetween(-0.2, 0.2);  // Random angle adjustment
-            throwSpeed += Phaser.Math.FloatBetween(-50, 50);  // Random speed adjustment
+            angle += Phaser.Math.FloatBetween(-0.2, 0.2);
+            throwSpeed += Phaser.Math.FloatBetween(-50, 50);
             
             let velocityX = Math.cos(angle) * throwSpeed;
-            let velocityY = Math.sin(angle) * throwSpeed - 250;  // Adjusted for more arc
+            let velocityY = Math.sin(angle) * throwSpeed - 250;
             
             this.mozzarella.setVelocity(velocityX, velocityY);
+
+            this.time.delayedCall(300, () => {
+                this.arm.setFrame(0);  // Reset to resting frame after throw
+            });
         }
 
         hitCousin() {
@@ -158,7 +171,7 @@
             this.levelText.setText('Level: ' + this.level);
             
             this.ferrySpeed += 0.1;
-            this.wind = Phaser.Math.Between(-3, 3);  // Increased wind effect
+            this.wind = Phaser.Math.Between(-3, 3);
 
             this.resetPositions();
         }
