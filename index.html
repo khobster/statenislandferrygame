@@ -81,7 +81,6 @@
             this.score = 0;
             this.level = 1;
             this.ferrySpeed = 0.5;
-            this.wind = 0;
             this.gameState = 'playing';
             this.levelCompleting = false;
         }
@@ -100,7 +99,6 @@
             }
 
             if (this.mozzarella.visible) {
-                this.mozzarella.x += this.wind;
                 if (this.mozzarella.y > 600 || this.mozzarella.x < 0 || this.mozzarella.x > 800) {
                     this.resetMozzarella();
                 }
@@ -172,13 +170,11 @@
             this.level++;
             this.levelText.setText('Level: ' + this.level);
             
-            this.ferrySpeed += 0.1;
-            this.wind = Phaser.Math.Between(-3, 3);
+            this.ferrySpeed += 0.1;  // Only increase ferry speed
 
             this.resetPositions();
             this.levelCompleting = false;
 
-            // Display "Level Complete" message
             let levelCompleteText = this.add.text(400, 300, 'Level Complete!', { fontSize: '48px', fill: '#000' }).setOrigin(0.5);
             this.time.delayedCall(2000, () => {
                 levelCompleteText.destroy();
