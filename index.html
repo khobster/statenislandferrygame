@@ -16,27 +16,71 @@
             super('GameScene');
         }
 
-        // ... (previous preload and create functions remain the same)
+        preload() {
+            this.load.image('background', 'background.png');
+            this.load.image('ferry', 'ferry.png');
+            this.load.image('mozzarella', 'mozzarella.png');
+            this.load.image('salami', 'salami.png');
+            this.load.image('bagel', 'bagel.png');
+            this.load.image('pizza', 'pizza.png');
+            this.load.image('spaghetti', 'spaghetti.png');
+            this.load.image('debtor', 'guy_who_couldnt_pay_his_debts.png');
+            this.load.spritesheet('shark', 'shark_spritesheet.png', { frameWidth: 200, frameHeight: 100 });
+        }
 
         create() {
-            // ... (previous create code remains the same)
-
+            this.add.image(400, 300, 'background');
+            this.ferry = this.add.image(200, 400, 'ferry');
+            
+            this.shark = this.physics.add.sprite(400, 550, 'shark');
+            this.shark.setCollideWorldBounds(true);
+            
+            this.anims.create({
+                key: 'swim',
+                frames: this.anims.generateFrameNumbers('shark', { start: 0, end: 0 }),
+                frameRate: 5,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'jump',
+                frames: this.anims.generateFrameNumbers('shark', { start: 1, end: 3 }),
+                frameRate: 10,
+                repeat: 0
+            });
+            
+            this.shark.play('swim');
+            
+            this.foods = this.physics.add.group();
+            
+            this.score = 0;
+            this.level = 1;
+            this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
+            this.levelText = this.add.text(16, 56, 'Level: 1', { fontSize: '32px', fill: '#000' });
+            
             this.cursors = this.input.keyboard.createCursorKeys();
             
+            this.time.addEvent({
+                delay: 2000,
+                callback: this.throwFood,
+                callbackScope: this,
+                loop: true
+            });
+            
+            this.physics.add.overlap(this.shark, this.foods, this.eatFood, null, this);
+
             // Add touch controls
             this.input.on('pointerdown', this.handleTouch, this);
             this.input.on('pointerup', this.handleTouchEnd, this);
-
-            // ... (rest of the create function remains the same)
         }
 
         update() {
-            this.ferry.x += 0.5;
-            if (this.ferry.x - this.ferry.width/2 > 800) {
-                this.ferry.x = -this.ferry.width/2;
+            if (this.ferry && this.ferry.x !== undefined) {
+                this.ferry.x += 0.5;
+                if (this.ferry.x - this.ferry.width/2 > 800) {
+                    this.ferry.x = -this.ferry.width/2;
+                }
             }
             
-            // Keyboard controls
             if (this.cursors.left.isDown) {
                 this.moveShark('left');
             } else if (this.cursors.right.isDown) {
@@ -53,20 +97,22 @@
                 this.shark.play('swim');
             }
             
-            // ... (rest of the update function remains the same)
+            this.foods.getChildren().forEach(food => {
+                if (food.y > 600) {
+                    food.destroy();
+                }
+            });
         }
 
         handleTouch(pointer) {
             this.isTouching = true;
             if (pointer.y > this.sys.game.config.height * 0.7) {
-                // Lower 30% of the screen: move left/right
                 if (pointer.x < this.sys.game.config.width / 2) {
                     this.moveShark('left');
                 } else {
                     this.moveShark('right');
                 }
             } else {
-                // Upper 70% of the screen: jump
                 this.jumpShark();
             }
         }
@@ -88,7 +134,55 @@
             }
         }
 
-        // ... (rest of the class methods remain the same)
+        throwFood() {
+            if (!this.ferry) return;
+
+            const foodTypes = ['mozzarella', 'salami', 'bagel', 'pizza', 'spaghetti', 'debtor'];
+            const randomFood = foodTypes[Math.floor(Math.random() * foodTypes.length)];
+            const x = this.ferry.x + Phaser.Math.Between(-50, 50);
+            const food = this.foods.create(x, this.ferry.y, randomFood);
+            
+            if (randomFood === 'mozzarella') {
+                food.setScale(0.1);
+            } else if (randomFood === 'debtor') {
+                food.setScale(0.5);
+            } else {
+                food.setScale(1);
+            }
+            
+            const throwAngle = Phaser.Math.DegToRad(Phaser.Math.Between(-60, -30));
+            const throwSpeed = Phaser.Math.Between(400, 600);
+            food.setVelocity(
+                throwSpeed * Math.cos(throwAngle),
+                throwSpeed * Math.sin(throwAngle)
+            );
+        }
+
+        eatFood(shark, food) {
+            food.destroy();
+            
+            let points;
+            switch(food.texture.key) {
+                case 'mozzarella': points = 10; break;
+                case 'salami': points = 20; break;
+                case 'bagel': points = 30; break;
+                case 'pizza': points = 40; break;
+                case 'spaghetti': points = 50; break;
+                case 'debtor': points = -50; break;
+            }
+            this.score += points;
+            this.scoreText.setText('Score: ' + this.score);
+            
+            if (this.score >= this.level * 100) {
+                this.levelUp();
+            }
+        }
+
+        levelUp() {
+            this.level++;
+            this.levelText.setText('Level: ' + this.level);
+            // Increase difficulty here (e.g., faster food, more frequent throws)
+        }
     }
 
     const config = {
